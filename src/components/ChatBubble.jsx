@@ -100,13 +100,33 @@ export const BotBubble = ({
     </div>
   );
 };
-
-export const UserBubble = ({ text_content = 'Hi' }) => {
+export const OtherUserBubble = ({
+  text_content = "Text not found",
+  text_time = "12:00 AM",
+}) => {
   return (
-    <div className="chat chat-end ">
-      <div className="chat-bubble bg-purple-800">
-        {text_content}
+    <div class="chat chat-start max-w-2/3 w-1/3">
+      <div class="chat-bubble flex flex-col gap-3">
+        <span className="text-base">
+          {text_content}
+        </span>
+        <small className="text-end w-full">{text_time}</small>
       </div>
     </div>
   );
 };
+
+export const UserBubble = ({ text_content = 'Hi',text_time }) => {
+  return (
+    <div className="chat chat-end ">
+      <div className="chat-bubble flex flex-col gap-3 bg-purple-800">
+      <span className="text-base font-bold">
+          {text_content}
+        </span>
+        <small className="text-start w-full">{text_time}</small>
+      </div>
+    </div>
+  );
+};
+
+

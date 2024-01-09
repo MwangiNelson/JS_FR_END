@@ -1,17 +1,26 @@
 import { useContext, useRef, useState } from "react";
-import { IconButton } from "../../../components/buttons";
-import { BotBubble, UserBubble } from "./ChatBubble";
+import { AppButton, IconButton } from "../../../components/buttons";
+import { BotBubble, UserBubble } from "../../../components/ChatBubble";
 import { FaWandMagicSparkles } from "react-icons/fa6";
 import { RiTelegramFill } from "react-icons/ri";
 import { AppContext } from "../../../contexts/AppContexts";
 import { toast } from "react-toastify";
 import Loader from "../../../components/loader";
 
-const ChatPanel = () => {
-  const promptRef = useRef(null);
-  const [conversation, setConversation] = useState([])
+import { arrayUnion, doc, updateDoc, setDoc, getDoc } from "firebase/firestore";
+import 'firebase/firestore';
 
-  const { promptBot } = useContext(AppContext)
+import { db } from "../../../firebase";
+import { BsPenFill } from "react-icons/bs";
+import { TbPencilCode } from "react-icons/tb";
+
+const ChatPanel = () => {
+
+  const promptRef = useRef(null);
+
+  const [conversation, setConversation] = useState({})
+
+  const { promptBot, userData } = useContext(AppContext)
 
   const getTherapistText = (text) => {
     let t = text.split('[SEP]')
@@ -19,44 +28,92 @@ const ChatPanel = () => {
   }
 
   const [loading, setLoading] = useState(false)
+
+
   const sendPrompt = async (event) => {
     event.preventDefault();
     setLoading(true); // Start loading
 
     const prompt = promptRef.current.value;
+    const userId = await userData.getIdToken(); // Replace with the actual user ID
 
     try {
       const response = await promptBot({ text: `${prompt} [SEP]` });
+      let botResponse = "";
 
       if (!response) {
-        setConversation([...conversation, {
-          user: prompt,
-          bot: "I'm sorry, I cannot generate a response at this moment. Please try again later."
-        }]);
+        botResponse = "I'm sorry, I cannot generate a response at this moment. Please try again later.";
       } else {
         const responseData = await response.json();
-        console.log(responseData)
-        setConversation([...conversation, {
-          user: prompt,
-          bot: getTherapistText(responseData) // Assuming getTherapistText processes the response
-        }]);
+        botResponse = getTherapistText(responseData); // Process the response
       }
+
+      // Update conversation state
+      setConversation(prev => {
+        const updatedConvo = {
+          ...prev,
+          [`user${Object.keys(prev).length / 2 + 1}`]: prompt,
+          [`bot${Object.keys(prev).length / 2 + 1}`]: botResponse
+        };
+
+        // Store data in Firestore
+        storeData(userId, updatedConvo);
+        return updatedConvo;
+      });
+
     } catch (error) {
       console.error('Error:', error);
       // Handle the error case
-      setConversation([...conversation, {
-        user: prompt,
-        bot: "An error occurred. Please try again."
-      }]);
+      setConversation(prev => ({
+        ...prev,
+        [`user${Object.keys(prev).length / 2 + 1}`]: prompt,
+        [`bot${Object.keys(prev).length / 2 + 1}`]: "An error occurred. Please try again."
+      }));
     } finally {
       setLoading(false); // End loading
     }
   };
 
 
+  const storeData = async (userId, conversation) => {
+    try {
+      const userDocRef = doc(db, 'users', userId);
+      const userDoc = await getDoc(userDocRef);
+  
+      let convoCount = 1;
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        convoCount = userData.convoCount ? userData.convoCount + 1 : 1;
+        await updateDoc(userDocRef, { convoCount }); // Update the conversation count
+      } else {
+        await setDoc(userDocRef, { convoCount });
+      }
+  
+      const convoTitle = `CONVERSATION_${String(convoCount).padStart(2, '0')}`;
+  
+      // Store the whole conversation object
+      await setDoc(doc(db, 'users', userId, 'conversations', convoTitle), {
+        ...conversation,
+        convo_title: convoTitle,
+        convo_timestamp: new Date().toISOString()
+      });
+  
+      console.log('Conversation stored in Firestore');
+    } catch (error) {
+      console.error('Error storing conversation:', error);
+    }
+  };
+  
+
+
+  const startNewChat = () => {
+    // Reset the conversation state
+    setConversation({});
+  };
+
   return (
     <div className="w-full h-full relative px-4 flex flex-col justify-start">
-      <div className="w-full bg-white rounded-[2vh] p-4 flex flex-row justify-between">
+      <div className="w-full bg-white items-center rounded-[2vh] p-4 flex flex-row justify-between">
         <div className="w-fit flex flex-row gap-4">
           <img
             src="/images/bot.png"
@@ -70,6 +127,11 @@ const ChatPanel = () => {
               Active
             </span>
           </div>
+
+        </div>
+
+        <div className="flex flex-row">
+          <IconButton text={'Start New Chat'} Icon={TbPencilCode} backgroundColor={'bg-dull rounded text-cream border-dull hover:bg-gray-500 hover:text-white transition-all ease h-fit'} onClick={startNewChat} />
         </div>
       </div>
 
@@ -77,21 +139,23 @@ const ChatPanel = () => {
       <div className="flex gap-4 flex-col w-full pt-10 max-h-[60vh] overflow-y-scroll">
 
         {
-          conversation !== null ? conversation.map((convo) => {
+          conversation && Object.keys(conversation).length > 0 ? (
+            Object.entries(conversation).map(([key, message], index) => {
+              // Determine if the message is from the user or the bot based on the key
+              const isUserMessage = key.startsWith('user');
+              const BubbleComponent = isUserMessage ? UserBubble : BotBubble;
+              const author = isUserMessage ? "" : "NutriBot AI";
 
-            return (
-              <div className="flex flex-col gap-4 w-full">
-                <UserBubble text_author={""} text_content={convo.user} text_time={""} text_id={0} />
-                <BotBubble text_author={"NutriBot AI"} text_content={convo.bot} text_time={""} text_id={0} />
-
-              </div>
-            )
-          }) : null
-
+              return (
+                <div key={index} className="flex flex-col gap-4 w-full">
+                  <BubbleComponent text_author={author} text_content={message} text_time={""} text_id={index} />
+                </div>
+              );
+            })
+          ) : null
         }
-        {
-          loading ? <Loader /> : null
-        }
+        {loading ? <Loader /> : null}
+
       </div>
 
       <form

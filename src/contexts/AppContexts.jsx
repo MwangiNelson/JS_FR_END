@@ -1,15 +1,20 @@
 // MyContext.js
 import React, { createContext, useState, useEffect } from 'react';
 import axios from 'axios'
+import { useNavigate } from 'react-router-dom';
 import { auth } from '../firebase';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
 import { toast } from 'react-toastify';
+
 
 const BOT_ENDPOINT = 'https://nutribot.onrender.com/generate-text'
 export const AppContext = createContext();
 
 export const AppProvider = ({ children }) => {
+
     const [userData, setUserData] = useState(null);
+
+    const [activeConvo, setActiveConvo] = useState(null)
 
     useEffect(() => {
         const storedUserData = sessionStorage.getItem('userData');
@@ -59,7 +64,13 @@ export const AppProvider = ({ children }) => {
         try {
             const response = await signInWithEmailAndPassword(auth, email, password);
             // Handle successful login
+            let user = response.user
+            const token = await user.getIdToken();
+            // console.log("JWT:", token);
+
             setUserData(response.user);
+            // console.log(response.user)
+
             return response.user;
         } catch (error) {
             // Handle errors
@@ -69,7 +80,6 @@ export const AppProvider = ({ children }) => {
     }
 
     async function promptBot(prompt) {
-
         const headers = {
             "Content-Type": "application/json"
         };
@@ -82,18 +92,22 @@ export const AppProvider = ({ children }) => {
             mode: 'cors' // Enable CORS
         };
 
-
-
         try {
-
             let botResponse = await fetch(BOT_ENDPOINT, requestOptions);
+            if (!botResponse.ok) {
+                // If the response status is not ok, throw an error
+                return(`[SEP]I'm sorry, I am unable to respond at this time.`);
+                
+            }
 
-            return botResponse
+            return await botResponse; // Assuming the response is text
         } catch (err) {
-
-            throw err
+            // Return the error message as a string
+            console.error("Error fetching response from bot:", err);
+            return `Error: ${err.message}`;
         }
     }
+
 
     const logout = () => {
         auth.signOut()
@@ -108,7 +122,9 @@ export const AppProvider = ({ children }) => {
         login,
         signup,
         logout,
-        promptBot
+        promptBot,
+        setActiveConvo
+        , activeConvo
 
     };
 

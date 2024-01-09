@@ -1,6 +1,7 @@
 import React from "react";
 import { IconButton } from "../components/buttons";
 import { RiArrowRightUpLine } from "react-icons/ri";
+import { Link } from "react-router-dom";
 
 function Home() {
   return (
@@ -8,7 +9,7 @@ function Home() {
       <div className="w-11/12 md:w-10/12 lg:w-3/4 flex flex-col md:flex-row items-center lg:gap-0 gap-10">
         <div className="w-full md:w-1/2 flex flex-col gap-5 lg:gap-10 items-start justify-center">
           <h1 className="mb-4 text-3xl font-bold text-gray-900 dark:text-white md:text-5xl lg:text-7xl gap-3">
-            Get your custom 
+            Get your custom
             <span className="text-transparent bg-clip-text bg-gradient-to-r to-emerald-600 from-sky-400">
               Chatbot
             </span>
@@ -19,12 +20,14 @@ function Home() {
             and capital can unlock long-term value and drive economic growth.
           </p>
 
-          <IconButton 
-            text="Try Nutribot"
-            Icon={RiArrowRightUpLine}
-            backgroundColor="bg-purple-800"
-            textStyle="text-white"
-          />
+          <Link to={'/chat'}>
+            <IconButton
+              text="Try Nutribot"
+              Icon={RiArrowRightUpLine}
+              backgroundColor="bg-purple-800"
+              textStyle="text-white"
+            />
+          </Link>
         </div>
         <div className="w-full md:w-1/2 flex justify-end">
           <img src="/images/chat.png" className="h-[50vh] lg:w-fit w-full lg:object-cover object-contain lg:h-fit" alt="" />

@@ -4,13 +4,16 @@ import App from './App.jsx'
 import './index.css'
 import { BrowserRouter } from 'react-router-dom'
 import { AppProvider } from './contexts/AppContexts.jsx'
+import { ConversationsProvider } from './contexts/ConversationsContext.jsx'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
+  <>
     <AppProvider>
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
+      <ConversationsProvider>
+        <BrowserRouter>
+          <App />
+        </BrowserRouter>
+      </ConversationsProvider>
     </AppProvider>
-  </React.StrictMode>,
+  </>,
 )
