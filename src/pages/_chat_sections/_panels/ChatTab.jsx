@@ -22,11 +22,23 @@ const ChatPanel = () => {
 
   const { promptBot, userData } = useContext(AppContext)
 
-  const getTherapistText = (text) => {
-    let t = text.split('[SEP]')
-    return t[1]
-  }
-
+  const getTherapistText = (initial, text) => {
+    let index = text.indexOf(initial);
+    if (index !== -1) {
+      let remainingText = text.substring(index + initial.length).trim();
+      // Use a regular expression to match the first two sentences
+      const sentences = remainingText.match(/[^.!?]+[.!?]+/);
+      if (sentences && sentences.length >= 2) {
+        return sentences[0] + sentences[1];
+      } else {
+        // Return the entire remaining text if less than 2 sentences
+        return remainingText;
+      }
+    } else {
+      // Handle the case where the initial text is not found
+      return text;
+    }
+  };
   const [loading, setLoading] = useState(false)
 
 
@@ -38,14 +50,14 @@ const ChatPanel = () => {
     const userId = await userData.getIdToken(); // Replace with the actual user ID
 
     try {
-      const response = await promptBot({ text: `${prompt} [SEP]` });
+      const response = await promptBot({ text: `${prompt}` });
       let botResponse = "";
 
       if (!response) {
         botResponse = "I'm sorry, I cannot generate a response at this moment. Please try again later.";
       } else {
         const responseData = await response.json();
-        botResponse = getTherapistText(responseData); // Process the response
+        botResponse = getTherapistText(prompt, responseData); // Process the response
       }
 
       // Update conversation state
@@ -79,7 +91,7 @@ const ChatPanel = () => {
     try {
       const userDocRef = doc(db, 'users', userId);
       const userDoc = await getDoc(userDocRef);
-  
+
       let convoCount = 1;
       if (userDoc.exists()) {
         const userData = userDoc.data();
@@ -88,22 +100,24 @@ const ChatPanel = () => {
       } else {
         await setDoc(userDocRef, { convoCount });
       }
-  
+
       const convoTitle = `CONVERSATION_${String(convoCount).padStart(2, '0')}`;
-  
+
       // Store the whole conversation object
       await setDoc(doc(db, 'users', userId, 'conversations', convoTitle), {
         ...conversation,
         convo_title: convoTitle,
         convo_timestamp: new Date().toISOString()
       });
-  
+
       console.log('Conversation stored in Firestore');
     } catch (error) {
       console.error('Error storing conversation:', error);
     }
   };
-  
+
+
+
 
 
   const startNewChat = () => {

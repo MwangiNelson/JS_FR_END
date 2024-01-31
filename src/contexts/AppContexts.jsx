@@ -7,7 +7,7 @@ import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "fire
 import { toast } from 'react-toastify';
 
 
-const BOT_ENDPOINT = 'https://nutribot.onrender.com/generate-text'
+const BOT_ENDPOINT = 'https://nutribot-v3.onrender.com/generate-text'
 export const AppContext = createContext();
 
 export const AppProvider = ({ children }) => {
@@ -96,15 +96,40 @@ export const AppProvider = ({ children }) => {
             let botResponse = await fetch(BOT_ENDPOINT, requestOptions);
             if (!botResponse.ok) {
                 // If the response status is not ok, throw an error
-                return(`[SEP]I'm sorry, I am unable to respond at this time.`);
-                
+                return (`[SEP]I'm sorry, I am unable to respond at this time.`);
+
             }
 
-            return await botResponse; // Assuming the response is text
+            return botResponse; // Assuming the response is text
         } catch (err) {
             // Return the error message as a string
             console.error("Error fetching response from bot:", err);
             return `Error: ${err.message}`;
+        }
+    }
+
+    const saveConvo = async (data) => {
+        let API_ENDPOINT = 'http://127.0.0.1:8000/api/add_convo'
+        try {
+            const response = await fetch(API_ENDPOINT, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: data,
+            });
+
+            if (response.ok) {
+                const res = await response.json();
+                console.log('Convo Added successfully');
+
+                return true
+            } else {
+                console.log('Convo could not be added');
+                return false
+            }
+        } catch (err) {
+            console.error(err)
         }
     }
 
@@ -125,6 +150,7 @@ export const AppProvider = ({ children }) => {
         promptBot,
         setActiveConvo
         , activeConvo
+        , saveConvo
 
     };
 
